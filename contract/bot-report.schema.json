@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botconsole.invalid/contract/bot-report.schema.json",
+  "title": "Bot report: bot to server (contract v0.2, draft)",
+  "description": "Sent by the Expert Advisor with POST /v1/report every few seconds. One request per cycle; the server's reply carries any commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sent_at", "seq", "boot_id", "bot", "account", "snapshot", "trading_paused", "strategies", "open_positions", "closed_deals", "signals", "bars", "command_results"],
+  "properties": {
+    "schema_version": { "const": "0.2" },
+    "sent_at": { "$ref": "common.schema.json#/$defs/utcTime" },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Counts up by one per report within one boot_id. A gap tells the server a report was lost."
+    },
+    "boot_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64,
+      "description": "Random value chosen each time the bot starts. A new boot_id means the bot restarted; seq starts again at 1."
+    },
+    "bot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "platform", "platform_build"],
+      "properties": {
+        "version": { "$ref": "common.schema.json#/$defs/version" },
+        "platform": { "const": "MT5" },
+        "platform_build": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "account": { "$ref": "common.schema.json#/$defs/account" },
+    "snapshot": { "$ref": "common.schema.json#/$defs/snapshot" },
+    "trading_paused": { "type": "boolean", "description": "State of the whole-bot Auto switch. True means no new entries on any strategy." },
+    "strategies": {
+      "type": "array",
+      "description": "Every strategy compiled into this bot, whether on or off.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "magic", "enabled", "state", "settings_rev", "symbols", "error"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/strategyId" },
+          "version": { "$ref": "common.schema.json#/$defs/version" },
+          "magic": { "type": "integer", "minimum": 1, "description": "Unique number stamped on every order of this strategy. The bot maps trades to strategies by it." },
+          "enabled": { "type": "boolean", "description": "False means no new entries. Open positions keep being managed." },
+          "state": { "enum": ["idle", "in_position", "paused", "error"] },
+          "settings_rev": { "type": "integer", "minimum": 0, "description": "Revision of the settings the bot is running right now." },
+          "symbols": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/symbol" }, "minItems": 1 },
+          "error": { "type": ["string", "null"], "maxLength": 200 }
+        }
+      }
+    },
+    "open_positions": {
+      "type": "array",
+      "description": "Every open position on the account, including ones the bot does not own (strategy_id null).",
+      "items": { "$ref": "common.schema.json#/$defs/position" }
+    },
+    "closed_deals": {
+      "type": "array",
+      "description": "Closing deals after the cursor the server last acknowledged (ack.closed_through). The server de-duplicates by deal_id, so resending is safe.",
+      "items": { "$ref": "common.schema.json#/$defs/closedDeal" }
+    },
+    "signals": {
+      "type": "array",
+      "description": "Signals raised since the previous report, including ones the bot skipped and why.",
+      "items": { "$ref": "common.schema.json#/$defs/signal" }
+    },
+    "bars": {
+      "type": "array",
+      "maxItems": 1000,
+      "description": "Closed 1-minute candles after ack.bars_through, oldest first, at most 1000 per report (the first connection sends the history in chunks). The server builds every chart timeframe and both averages from these, so the dashboard and the bot use one source.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["t", "o", "h", "l", "c", "v"],
+        "properties": {
+          "t": { "$ref": "common.schema.json#/$defs/utcTime", "description": "Open time of the candle." },
+          "o": { "$ref": "common.schema.json#/$defs/price" },
+          "h": { "$ref": "common.schema.json#/$defs/price" },
+          "l": { "$ref": "common.schema.json#/$defs/price" },
+          "c": { "$ref": "common.schema.json#/$defs/price" },
+          "v": { "type": "integer", "minimum": 0, "description": "Tick volume." }
+        }
+      }
+    },
+    "command_results": {
+      "type": "array",
+      "description": "Outcome of commands received earlier. Sent until the server acknowledges them.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command_id", "status", "reason", "at"],
+        "properties": {
+          "command_id": { "type": "string", "minLength": 8, "maxLength": 64 },
+          "status": { "enum": ["applied", "rejected", "failed", "expired"], "description": "failed = the command was valid but the broker refused it (for example market closed); reason says why." },
+          "reason": { "type": ["string", "null"], "maxLength": 200 },
+          "at": { "$ref": "common.schema.json#/$defs/utcTime" }
+        }
+      }
+    }
+  }
+}

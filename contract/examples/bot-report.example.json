@@ -1,0 +1,157 @@
+{
+  "schema_version": "0.2",
+  "sent_at": "2026-10-15T23:30:07Z",
+  "seq": 48210,
+  "boot_id": "b7c1e9d4a2f04e83",
+  "bot": {
+    "version": "0.5.0",
+    "platform": "MT5",
+    "platform_build": 6308
+  },
+  "account": {
+    "login": 70234561,
+    "server": "Exness-MT5Trial",
+    "currency": "USD",
+    "mode": "demo",
+    "margin_mode": "hedging",
+    "leverage": 200
+  },
+  "snapshot": {
+    "balance": 9871.81,
+    "equity": 9886.43,
+    "margin": 20.88,
+    "free_margin": 9865.55,
+    "margin_level": 47348.8,
+    "floating_pl": 14.62
+  },
+  "trading_paused": false,
+  "strategies": [
+    {
+      "id": "sma_cross",
+      "version": "0.1.0",
+      "magic": 550011,
+      "enabled": true,
+      "state": "in_position",
+      "settings_rev": 3,
+      "symbols": [
+        "XAUUSD"
+      ],
+      "error": null
+    },
+    {
+      "id": "rsi_revert",
+      "version": "0.9.1",
+      "magic": 102001,
+      "enabled": true,
+      "state": "idle",
+      "settings_rev": 4,
+      "symbols": [
+        "XAUUSD"
+      ],
+      "error": null
+    },
+    {
+      "id": "range_break",
+      "version": "1.0.0",
+      "magic": 103001,
+      "enabled": false,
+      "state": "paused",
+      "settings_rev": 2,
+      "symbols": [
+        "XAUUSD"
+      ],
+      "error": null
+    }
+  ],
+  "open_positions": [
+    {
+      "position_id": 4205117852,
+      "strategy_id": "sma_cross",
+      "magic": 550011,
+      "symbol": "XAUUSD",
+      "side": "buy",
+      "volume": 0.01,
+      "volume_locked": true,
+      "open_time": "2026-10-15T22:19:02Z",
+      "open_price": 4160.98,
+      "current_price": 4175.63,
+      "sl": 4150.98,
+      "sl_original": 4150.98,
+      "tp": 4190.98,
+      "profit": 14.65,
+      "swap": 0.0,
+      "commission": -0.03
+    }
+  ],
+  "closed_deals": [
+    {
+      "deal_id": 3908220546,
+      "position_id": 4205117840,
+      "strategy_id": "rsi_revert",
+      "magic": 102001,
+      "symbol": "XAUUSD",
+      "side": "buy",
+      "volume": 0.05,
+      "open_time": "2026-10-15T08:20:00Z",
+      "close_time": "2026-10-15T08:36:00Z",
+      "open_price": 4144.15,
+      "close_price": 4138.15,
+      "profit": -30.0,
+      "commission": -0.3,
+      "swap": 0.0,
+      "close_reason": "stop_loss"
+    },
+    {
+      "deal_id": 3908220548,
+      "position_id": 4205117846,
+      "strategy_id": "rsi_revert",
+      "magic": 102001,
+      "symbol": "XAUUSD",
+      "side": "sell",
+      "volume": 0.05,
+      "open_time": "2026-10-15T10:40:00Z",
+      "close_time": "2026-10-15T11:11:00Z",
+      "open_price": 4144.77,
+      "close_price": 4150.77,
+      "profit": -30.0,
+      "commission": -0.3,
+      "swap": 0.0,
+      "close_reason": "stop_loss"
+    }
+  ],
+  "signals": [],
+  "bars": [
+    {
+      "t": "2026-10-15T22:57:00Z",
+      "o": 4172.89,
+      "h": 4173.44,
+      "l": 4172.53,
+      "c": 4173.28,
+      "v": 232
+    },
+    {
+      "t": "2026-10-15T22:58:00Z",
+      "o": 4173.28,
+      "h": 4175.79,
+      "l": 4172.63,
+      "c": 4175.76,
+      "v": 288
+    },
+    {
+      "t": "2026-10-15T22:59:00Z",
+      "o": 4175.73,
+      "h": 4176.4,
+      "l": 4174.87,
+      "c": 4175.63,
+      "v": 430
+    }
+  ],
+  "command_results": [
+    {
+      "command_id": "cmd-5be07a31d9c4",
+      "status": "applied",
+      "reason": null,
+      "at": "2026-10-15T22:05:05Z"
+    }
+  ]
+}

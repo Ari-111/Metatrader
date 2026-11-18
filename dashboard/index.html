@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Bot Console</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="sample-note">Mock-up with sample data. The gold prices and the crosses are real 1-minute history from an MT5 test feed; the account, trades, news and every control are simulated. Nothing here is connected to a broker.</div>
+  <div class="shell">
+    <aside class="rail" id="rail" aria-label="Account and navigation"></aside>
+    <div class="stage">
+      <div id="band"></div>
+      <main id="main" tabindex="-1">
+        <noscript><p class="empty">This page needs JavaScript to show the sample data.</p></noscript>
+      </main>
+    </div>
+  </div>
+  <script src="data/sample-overview.js"></script>
+  <script src="dom.js"></script>
+  <script src="chart.js"></script>
+  <script src="view-trade.js"></script>
+  <script src="view-chart.js"></script>
+  <script src="view-volatility.js"></script>
+  <script src="view-alerts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

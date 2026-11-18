@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botconsole.invalid/contract/dashboard-command-reply.schema.json",
+  "title": "Dashboard command reply: server to dashboard (contract v0.2, draft)",
+  "description": "The immediate answer to a dashboard command. 'queued' only means the server accepted it for the bot; whether the bot applied it shows up later in the overview's recent_commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "command_id", "expires_at", "reason"],
+  "properties": {
+    "schema_version": { "const": "0.2" },
+    "status": { "enum": ["queued", "duplicate", "rejected"], "description": "duplicate = the same client_request_id was already accepted; command_id is the original one." },
+    "command_id": { "type": ["string", "null"], "minLength": 8, "maxLength": 64 },
+    "expires_at": {
+      "oneOf": [{ "$ref": "common.schema.json#/$defs/utcTime" }, { "type": "null" }],
+      "description": "If the bot has not picked the command up by then it expires and nothing happens (about 2 minutes)."
+    },
+    "reason": { "type": ["string", "null"], "maxLength": 200, "description": "Plain-language reason when rejected, for example 'Lot 0.50 is above the max lot of 0.10'." }
+  },
+  "if": { "properties": { "status": { "const": "rejected" } } },
+  "then": {
+    "properties": { "command_id": { "type": "null" }, "expires_at": { "type": "null" }, "reason": { "type": "string" } }
+  },
+  "else": {
+    "properties": { "command_id": { "type": "string" }, "expires_at": { "type": "string" } }
+  }
+}

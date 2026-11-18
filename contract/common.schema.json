@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botconsole.invalid/contract/common.schema.json",
+  "title": "Shared definitions (contract v0.2, draft)",
+  "description": "Building blocks reused by the bot report, the server response and the dashboard overview. All times are UTC. All money is in the account currency.",
+  "$defs": {
+    "utcTime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$",
+      "description": "UTC instant, ISO 8601, always ending in Z."
+    },
+    "amount": {
+      "type": "number",
+      "description": "Signed money in the account currency, rounded to 2 decimals by the sender."
+    },
+    "price": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "lots": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Trade volume in lots."
+    },
+    "side": {
+      "enum": ["buy", "sell"],
+      "description": "Direction of the position (not of the closing deal)."
+    },
+    "symbol": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "description": "Broker symbol exactly as the terminal spells it (for example XAUUSD or XAUUSDm; the real name depends on the account type)."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "strategyId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,31}$",
+      "description": "Stable machine name from the strategy spec. Never reused for a different strategy."
+    },
+    "strategyRef": {
+      "oneOf": [
+        { "$ref": "#/$defs/strategyId" },
+        { "type": "null" }
+      ],
+      "description": "Strategy that owns a trade, or null for trades the bot does not own (manual trades, other bots)."
+    },
+
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["login", "server", "currency", "mode", "margin_mode", "leverage"],
+      "properties": {
+        "login": { "type": "integer", "minimum": 1 },
+        "server": { "type": "string", "minLength": 1 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "mode": { "enum": ["demo", "real", "contest"] },
+        "margin_mode": { "enum": ["netting", "hedging"] },
+        "leverage": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["balance", "equity", "margin", "free_margin", "margin_level", "floating_pl"],
+      "properties": {
+        "balance": { "$ref": "#/$defs/amount" },
+        "equity": { "$ref": "#/$defs/amount" },
+        "margin": { "type": "number", "minimum": 0 },
+        "free_margin": { "$ref": "#/$defs/amount" },
+        "margin_level": {
+          "type": ["number", "null"],
+          "description": "Percent. Null when no margin is in use."
+        },
+        "floating_pl": {
+          "$ref": "#/$defs/amount",
+          "description": "Sum of profit + swap + commission over open positions."
+        }
+      }
+    },
+
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position_id", "strategy_id", "magic", "symbol", "side", "volume", "volume_locked", "open_time", "open_price", "current_price", "sl", "sl_original", "tp", "profit", "swap", "commission"],
+      "properties": {
+        "position_id": { "type": "integer", "minimum": 1 },
+        "strategy_id": { "$ref": "#/$defs/strategyRef" },
+        "magic": { "type": "integer", "minimum": 0 },
+        "symbol": { "$ref": "#/$defs/symbol" },
+        "side": { "$ref": "#/$defs/side" },
+        "volume": { "$ref": "#/$defs/lots" },
+        "volume_locked": { "type": "boolean", "description": "True for every position the bot owns: no command can change its volume and the bot never closes part of it. The lot for the next trade is a separate setting." },
+        "open_time": { "$ref": "#/$defs/utcTime" },
+        "open_price": { "$ref": "#/$defs/price" },
+        "current_price": { "$ref": "#/$defs/price" },
+        "sl": { "oneOf": [{ "$ref": "#/$defs/price" }, { "type": "null" }], "description": "Stop loss price, or null if none. Library strategies must always set one." },
+        "sl_original": { "oneOf": [{ "$ref": "#/$defs/price" }, { "type": "null" }], "description": "The stop loss the order was opened with. position.set_levels may only move the stop from here toward the price, never further away." },
+        "tp": { "oneOf": [{ "$ref": "#/$defs/price" }, { "type": "null" }] },
+        "profit": { "$ref": "#/$defs/amount", "description": "Floating profit before swap and commission." },
+        "swap": { "$ref": "#/$defs/amount" },
+        "commission": { "$ref": "#/$defs/amount" }
+      }
+    },
+
+    "closedDeal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deal_id", "position_id", "strategy_id", "magic", "symbol", "side", "volume", "open_time", "close_time", "open_price", "close_price", "profit", "commission", "swap", "close_reason"],
+      "description": "One record per closing deal. A position closed in parts produces one record per part, sharing position_id. Net result = profit + commission + swap.",
+      "properties": {
+        "deal_id": { "type": "integer", "minimum": 1 },
+        "position_id": { "type": "integer", "minimum": 1 },
+        "strategy_id": { "$ref": "#/$defs/strategyRef" },
+        "magic": { "type": "integer", "minimum": 0 },
+        "symbol": { "$ref": "#/$defs/symbol" },
+        "side": { "$ref": "#/$defs/side" },
+        "volume": { "$ref": "#/$defs/lots", "description": "Volume closed by this deal." },
+        "open_time": { "$ref": "#/$defs/utcTime" },
+        "close_time": { "$ref": "#/$defs/utcTime" },
+        "open_price": { "$ref": "#/$defs/price" },
+        "close_price": { "$ref": "#/$defs/price" },
+        "profit": { "$ref": "#/$defs/amount" },
+        "commission": { "$ref": "#/$defs/amount" },
+        "swap": { "$ref": "#/$defs/amount" },
+        "close_reason": {
+          "enum": ["take_profit", "stop_loss", "bot", "manual", "stop_out", "other"],
+          "description": "bot = the Expert Advisor closed it on a strategy exit rule; manual = closed by hand in the terminal or the phone app."
+        }
+      }
+    },
+
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal_id", "strategy_id", "time", "candle_close", "symbol", "kind", "side", "acted", "lot", "reason"],
+      "properties": {
+        "signal_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "strategy_id": { "$ref": "#/$defs/strategyId" },
+        "time": { "$ref": "#/$defs/utcTime", "description": "When the bot raised the signal (the first tick after the candle closed)." },
+        "candle_close": { "$ref": "#/$defs/utcTime", "description": "Close time of the 1-minute candle that produced the signal. The same moment on every chart timeframe." },
+        "symbol": { "$ref": "#/$defs/symbol" },
+        "kind": { "enum": ["entry", "exit", "skipped", "heads_up"], "description": "heads_up = the two lines are getting close (optional alert); it never leads to an order." },
+        "side": { "oneOf": [{ "$ref": "#/$defs/side" }, { "type": "null" }] },
+        "acted": { "type": "boolean", "description": "True if the bot sent an order because of this signal." },
+        "lot": { "oneOf": [{ "$ref": "#/$defs/lots" }, { "type": "null" }], "description": "Lot the order used. Null when no order was sent." },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Plain-language reason shown on the dashboard." }
+      }
+    },
+
+    "commandBody": {
+      "type": "object",
+      "required": ["type", "payload"],
+      "description": "What a command does. Used by the server's command to the bot and by the dashboard's request to the server, so the two can never drift apart.",
+      "properties": {
+        "type": { "enum": ["strategy.set_enabled", "strategy.update_settings", "bot.set_trading_paused", "position.close", "position.set_levels"] },
+        "payload": { "type": "object" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "strategy.set_enabled" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["strategy_id", "enabled"],
+              "properties": {
+                "strategy_id": { "$ref": "#/$defs/strategyId" },
+                "enabled": { "type": "boolean", "description": "False means no new entries for this strategy. Its open trade keeps its stop, target and exit rules." }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "strategy.update_settings" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["strategy_id", "settings_rev", "settings"],
+              "properties": {
+                "strategy_id": { "$ref": "#/$defs/strategyId" },
+                "settings_rev": { "type": "integer", "minimum": 1, "description": "The revision this change creates. The bot ignores a revision it already has." },
+                "settings": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "description": "Setting key to new value. Each key and range is defined in the strategy spec; the bot rejects the whole command if any value is outside its range. Changing next_lot never touches an open trade: it applies to the next order.",
+                  "propertyNames": { "pattern": "^[a-z][a-z0-9_]{1,31}$" },
+                  "additionalProperties": { "type": ["number", "string", "boolean"] }
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "bot.set_trading_paused" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["paused"],
+              "properties": {
+                "paused": { "type": "boolean", "description": "True stops new entries on every strategy. Open positions keep being managed." }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "position.close" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["position_id"],
+              "description": "Close one whole position at market. Only positions the bot owns; the bot does not re-enter until the next signal.",
+              "properties": { "position_id": { "type": "integer", "minimum": 1 } }
+            }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "position.set_levels" },
+            "payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["position_id"],
+              "anyOf": [{ "required": ["sl"] }, { "required": ["tp"] }],
+              "description": "Move the stop loss and/or take profit of one position. The stop can only be tightened (never removed, never further than sl_original); the target can move either way but cannot be removed.",
+              "properties": {
+                "position_id": { "type": "integer", "minimum": 1 },
+                "sl": { "$ref": "#/$defs/price" },
+                "tp": { "$ref": "#/$defs/price" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

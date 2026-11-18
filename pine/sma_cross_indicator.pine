@@ -1,0 +1,56 @@
+//@version=6
+// Gold cross signals (SHAREABLE DRAFT, NOT YET RUN IN TRADINGVIEW)
+//
+// What it does: marks a Buy or Sell on the chart and offers two alert conditions.
+// The periods are fixed in the code on purpose: there are no inputs for them, and the two averages
+// are not drawn, so someone with access to the script cannot read the settings from it.
+// (Publishing it as an INVITE-ONLY script also hides the source. See pine/README.md.)
+//
+// Same on every timeframe: the signals are always worked out from 1-minute candles, as the MT5 bot does.
+//   - On a 1-minute chart the crossing is read straight off the chart.
+//   - On a bigger chart every 1-minute candle inside each bar is checked (request.security_lower_tf),
+//     so no crossing is missed even if the opposite one follows inside the same bar.
+//   - On a chart below 1 minute the 1-minute result is shown on the next bar.
+// Rule (identical to docs/sma-cross-spec.md): a Buy is a fresh upward cross of the 100-candle average over
+// the 5,000-candle average on a CLOSED 1-minute candle; a Sell is the mirror.
+//
+// ALERTS: create them from a 1-MINUTE chart, set to "Once Per Bar Close", so the alert fires when the
+// 1-minute candle closes. An alert made on a bigger chart only fires when that bigger candle closes.
+indicator("Gold cross signals", shorttitle = "GCS", overlay = true)
+
+const int FAST = 100
+const int SLOW = 5000
+
+// ---- read on the chart's own candles (used when the chart is 1 minute)
+fastNow = ta.sma(close, FAST)
+slowNow = ta.sma(close, SLOW)
+upNow = ta.crossover(fastNow, slowNow) ? 1 : 0
+dnNow = ta.crossunder(fastNow, slowNow) ? 1 : 0
+
+// ---- the same test, written so it can be asked of the 1-minute series from any chart
+upFlag() => ta.crossover(ta.sma(close, FAST), ta.sma(close, SLOW)) ? 1 : 0
+dnFlag() => ta.crossunder(ta.sma(close, FAST), ta.sma(close, SLOW)) ? 1 : 0
+
+chartSeconds = timeframe.in_seconds(timeframe.period)
+
+int buys = 0
+int sells = 0
+if chartSeconds == 60
+    buys := barstate.isconfirmed ? upNow : 0
+    sells := barstate.isconfirmed ? dnNow : 0
+else if chartSeconds > 60
+    // one array per bar, holding the flag of each 1-minute candle inside it
+    upArr = request.security_lower_tf(syminfo.tickerid, "1", upFlag())
+    dnArr = request.security_lower_tf(syminfo.tickerid, "1", dnFlag())
+    buys := int(array.sum(upArr))
+    sells := int(array.sum(dnArr))
+else
+    buys := request.security(syminfo.tickerid, "1", upFlag())
+    sells := request.security(syminfo.tickerid, "1", dnFlag())
+
+plotshape(buys > 0, "Buy", shape.triangleup, location.belowbar, color.new(#2a78d6, 0), size = size.small)
+plotshape(sells > 0, "Sell", shape.triangledown, location.abovebar, color.new(#eb6834, 0), size = size.small)
+
+// The alert text carries no numbers and no hint of the settings.
+alertcondition(buys > 0, "Gold: Buy signal", "Buy signal")
+alertcondition(sells > 0, "Gold: Sell signal", "Sell signal")

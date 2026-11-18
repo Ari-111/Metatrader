@@ -1,0 +1,8 @@
+{
+  "schema_version": "0.2",
+  "client_request_id": "req-7d2f19c4e0a3",
+  "type": "position.close",
+  "payload": {
+    "position_id": 4205117852
+  }
+}

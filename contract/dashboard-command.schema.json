@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botconsole.invalid/contract/dashboard-command.schema.json",
+  "title": "Dashboard command: dashboard to server (contract v0.2, draft)",
+  "description": "What POST /v1/accounts/{id}/commands receives when a person presses a control (Close now, Auto switch, Next trade lot, TP/SL). The server checks the session, applies the same range checks the bot will, then queues a command for the bot. The reply is in dashboard-command-reply.schema.json.",
+  "type": "object",
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/commandBody" },
+    {
+      "required": ["schema_version", "client_request_id"],
+      "properties": {
+        "schema_version": { "const": "0.2" },
+        "client_request_id": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64,
+          "description": "Chosen by the dashboard for each press. A double tap or a retry with the same id queues one command, not two."
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

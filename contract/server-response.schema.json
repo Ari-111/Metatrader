@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botconsole.invalid/contract/server-response.schema.json",
+  "title": "Server response: server to bot (contract v0.2, draft)",
+  "description": "The reply to every bot report. It acknowledges what arrived, reports licence and update status, and carries pending commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "server_time", "ack", "license", "update", "poll_interval_s", "commands"],
+  "properties": {
+    "schema_version": { "const": "0.2" },
+    "server_time": {
+      "$ref": "common.schema.json#/$defs/utcTime",
+      "description": "The bot compares command expiry against this, never against its own clock."
+    },
+    "ack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "closed_through", "bars_through", "command_results"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 1 },
+        "closed_through": {
+          "oneOf": [{ "$ref": "common.schema.json#/$defs/utcTime" }, { "type": "null" }],
+          "description": "Latest close_time the server has stored. The bot sends only deals closed after this."
+        },
+        "bars_through": {
+          "oneOf": [{ "$ref": "common.schema.json#/$defs/utcTime" }, { "type": "null" }],
+          "description": "Open time of the newest 1-minute candle the server has stored. The bot sends only later candles. Null asks for the full history the slow average needs."
+        },
+        "command_results": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "command_ids whose results were stored; the bot stops resending them."
+        }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "valid_until", "token"],
+      "properties": {
+        "status": { "enum": ["active", "grace", "expired", "revoked"] },
+        "valid_until": { "$ref": "common.schema.json#/$defs/utcTime" },
+        "token": {
+          "type": ["string", "null"],
+          "description": "A fresh short-lived token when the server rotates it, otherwise null."
+        }
+      }
+    },
+    "update": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latest_version", "min_supported_version"],
+      "properties": {
+        "latest_version": { "$ref": "common.schema.json#/$defs/version" },
+        "min_supported_version": { "$ref": "common.schema.json#/$defs/version" }
+      }
+    },
+    "poll_interval_s": { "type": "integer", "minimum": 2, "maximum": 60 },
+    "commands": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/command" }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "common.schema.json#/$defs/commandBody" },
+        {
+          "required": ["command_id", "issued_at", "expires_at", "issued_by"],
+          "properties": {
+            "command_id": { "type": "string", "minLength": 8, "maxLength": 64 },
+            "issued_at": { "$ref": "common.schema.json#/$defs/utcTime" },
+            "expires_at": { "$ref": "common.schema.json#/$defs/utcTime" },
+            "issued_by": { "type": "string", "minLength": 1, "maxLength": 64 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

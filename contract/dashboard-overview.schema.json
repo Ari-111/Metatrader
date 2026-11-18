@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botconsole.invalid/contract/dashboard-overview.schema.json",
+  "title": "Dashboard overview: server to dashboard (contract v0.2, draft)",
+  "description": "What GET /v1/accounts/{id}/overview returns to the web dashboard. Built by the server from the bot reports it has stored; the dashboard never talks to the bot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "server_time", "account", "bot", "snapshot", "day_start", "equity_series", "open_positions", "strategies", "recent_deals", "recent_signals", "recent_commands", "chart", "volatility", "alerts"],
+  "properties": {
+    "schema_version": { "const": "0.2" },
+    "server_time": { "$ref": "common.schema.json#/$defs/utcTime" },
+    "account": { "$ref": "common.schema.json#/$defs/account" },
+    "sample_blocks": {
+      "type": "array",
+      "items": { "enum": ["chart", "volatility", "alerts"] },
+      "description": "Optional. Blocks of this overview that are still sample data rather than live. The dashboard says so on screen."
+    },
+
+    "bot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "version", "latest_version", "last_report_at", "report_interval_s", "trading_paused", "heartbeat"],
+      "properties": {
+        "trading_paused": { "type": "boolean", "description": "The whole-bot Auto switch as the bot last reported it. Auto is ON for a strategy only when the strategy is enabled and this is false." },
+        "status": {
+          "enum": ["online", "stale", "offline"],
+          "description": "Worked out by the server: online if the last report is within 3 intervals, stale within 60 s, offline after that."
+        },
+        "version": { "$ref": "common.schema.json#/$defs/version" },
+        "latest_version": { "$ref": "common.schema.json#/$defs/version" },
+        "last_report_at": { "$ref": "common.schema.json#/$defs/utcTime" },
+        "report_interval_s": { "type": "integer", "minimum": 2, "maximum": 60 },
+        "heartbeat": {
+          "type": "array",
+          "description": "The last 60 expected report slots, oldest first. ok=false means no report arrived for that slot.",
+          "minItems": 60,
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["t", "ok"],
+            "properties": {
+              "t": { "$ref": "common.schema.json#/$defs/utcTime" },
+              "ok": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+
+    "snapshot": { "$ref": "common.schema.json#/$defs/snapshot" },
+
+    "day_start": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time", "balance", "equity"],
+      "description": "Account values at the start of the current trading day, for the 'since start of day' change.",
+      "properties": {
+        "time": { "$ref": "common.schema.json#/$defs/utcTime" },
+        "balance": { "$ref": "common.schema.json#/$defs/amount" },
+        "equity": { "$ref": "common.schema.json#/$defs/amount" }
+      }
+    },
+
+    "equity_series": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Balance and equity over the last 24 hours, oldest first, one point about every 5 minutes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["t", "balance", "equity"],
+        "properties": {
+          "t": { "$ref": "common.schema.json#/$defs/utcTime" },
+          "balance": { "$ref": "common.schema.json#/$defs/amount" },
+          "equity": { "$ref": "common.schema.json#/$defs/amount" }
+        }
+      }
+    },
+
+    "open_positions": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/position" }
+    },
+
+    "strategies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "version", "magic", "enabled", "state", "symbols", "settings_rev", "settings", "today", "total", "open_count", "floating_pl"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/strategyId" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Display name from the strategy library." },
+          "version": { "$ref": "common.schema.json#/$defs/version" },
+          "magic": { "type": "integer", "minimum": 1 },
+          "enabled": { "type": "boolean" },
+          "state": { "enum": ["idle", "in_position", "paused", "error"] },
+          "symbols": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/symbol" }, "minItems": 1 },
+          "settings_rev": { "type": "integer", "minimum": 0 },
+          "settings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "label", "value", "unit", "min", "max", "step", "editable"],
+              "properties": {
+                "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" },
+                "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+                "value": { "type": ["number", "string", "boolean"] },
+                "unit": { "type": ["string", "null"], "maxLength": 12 },
+                "min": { "type": ["number", "null"], "description": "Lowest value the bot accepts. For next_lot this already reflects the broker's minimum." },
+                "max": { "type": ["number", "null"], "description": "Highest value the bot accepts. For next_lot this is the current max_lot setting." },
+                "step": { "type": ["number", "null"], "description": "Smallest change allowed (the broker's lot step for lots)." },
+                "editable": { "type": "boolean", "description": "False for fixed parts of the strategy (periods, the 1-minute anchor)." }
+              }
+            }
+          },
+          "today": { "$ref": "#/$defs/tally" },
+          "total": { "$ref": "#/$defs/tally" },
+          "open_count": { "type": "integer", "minimum": 0 },
+          "floating_pl": { "$ref": "common.schema.json#/$defs/amount" }
+        }
+      }
+    },
+
+    "recent_deals": {
+      "type": "array",
+      "description": "Most recent closing deals first.",
+      "items": { "$ref": "common.schema.json#/$defs/closedDeal" }
+    },
+    "recent_signals": {
+      "type": "array",
+      "description": "Most recent signals first.",
+      "items": { "$ref": "common.schema.json#/$defs/signal" }
+    },
+
+    "recent_commands": {
+      "type": "array",
+      "description": "Controls pressed on the dashboard, newest first, so the screen can say what happened to each: queued, sent to the bot, applied, rejected, failed at the broker, or expired (nothing happened).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command_id", "type", "summary", "issued_at", "expires_at", "status", "reason"],
+        "properties": {
+          "command_id": { "type": "string", "minLength": 8, "maxLength": 64 },
+          "type": { "enum": ["strategy.set_enabled", "strategy.update_settings", "bot.set_trading_paused", "position.close", "position.set_levels"] },
+          "summary": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Plain words, for example 'Close buy 0.01 lot'." },
+          "issued_at": { "$ref": "common.schema.json#/$defs/utcTime" },
+          "expires_at": { "$ref": "common.schema.json#/$defs/utcTime" },
+          "status": { "enum": ["queued", "sent", "applied", "rejected", "failed", "expired"] },
+          "reason": { "type": ["string", "null"], "maxLength": 200 }
+        }
+      }
+    },
+
+    "chart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "anchor", "fast_period", "slow_period", "as_of", "latest", "timeframes", "markers"],
+      "description": "Price chart data. The strategy is anchored on 1-minute candles: both averages come from 1-minute closes whatever chart is shown, and each timeframe below only regroups the same candles.",
+      "properties": {
+        "symbol": { "$ref": "common.schema.json#/$defs/symbol" },
+        "anchor": { "const": "1m" },
+        "fast_period": { "type": "integer", "minimum": 1 },
+        "slow_period": { "type": "integer", "minimum": 1 },
+        "as_of": { "$ref": "common.schema.json#/$defs/utcTime", "description": "Close time of the newest 1-minute candle used." },
+        "latest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fast", "slow", "gap", "last_cross"],
+          "properties": {
+            "fast": { "type": "number" },
+            "slow": { "type": "number" },
+            "gap": { "type": "number", "description": "Fast minus slow, in price units. Positive means the fast line is above." },
+            "last_cross": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["time", "side"],
+                  "properties": { "time": { "$ref": "common.schema.json#/$defs/utcTime" }, "side": { "$ref": "common.schema.json#/$defs/side" } }
+                },
+                { "type": "null" }
+              ]
+            }
+          }
+        },
+        "timeframes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["1m", "5m", "30m", "1h", "4h", "1d", "1mo"],
+          "properties": {
+            "1m": { "$ref": "#/$defs/candleSet" },
+            "5m": { "$ref": "#/$defs/candleSet" },
+            "30m": { "$ref": "#/$defs/candleSet" },
+            "1h": { "$ref": "#/$defs/candleSet" },
+            "4h": { "$ref": "#/$defs/candleSet" },
+            "1d": { "$ref": "#/$defs/candleSet" },
+            "1mo": { "$ref": "#/$defs/candleSet" }
+          }
+        },
+        "markers": {
+          "type": "array",
+          "description": "Every cross, oldest first. A marker is drawn on the candle that contains t, on every timeframe; several can share one candle.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["t", "side", "traded", "note"],
+            "properties": {
+              "t": { "$ref": "common.schema.json#/$defs/utcTime", "description": "The signal's candle_close." },
+              "side": { "$ref": "common.schema.json#/$defs/side" },
+              "traded": { "type": "boolean" },
+              "note": { "type": ["string", "null"], "maxLength": 80, "description": "Why it was not traded, for example 'Outside trading hours'." }
+            }
+          }
+        }
+      }
+    },
+
+    "volatility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["as_of", "unit", "now", "forecasts", "history", "scorecard", "events"],
+      "description": "Gold volatility outlook worked out from the bot's own 1-minute candles. 'Volatility' is the typical gold move per hour in dollars. It is not the VIX and it is a probability, not a promise.",
+      "properties": {
+        "as_of": { "$ref": "common.schema.json#/$defs/utcTime" },
+        "unit": { "const": "USD per hour" },
+        "now": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "percentile", "level"],
+          "properties": {
+            "value": { "type": "number", "minimum": 0, "description": "Typical move per hour over the last 6 trading hours." },
+            "percentile": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of the same time of day over the last 90 days that was at or below this." },
+            "level": { "enum": ["calm", "normal", "high", "extreme"] }
+          }
+        },
+        "forecasts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["horizon_h", "expected", "low", "high", "last_period", "change_pct", "prob_higher"],
+            "properties": {
+              "horizon_h": { "enum": [12, 24], "description": "Trading hours ahead (weekends and the daily break do not count)." },
+              "expected": { "type": "number", "minimum": 0, "description": "Expected typical move per hour over the period." },
+              "low": { "type": "number", "minimum": 0, "description": "10th percentile of the forecast." },
+              "high": { "type": "number", "minimum": 0, "description": "90th percentile of the forecast." },
+              "last_period": { "type": "number", "minimum": 0, "description": "Typical move per hour over the same number of hours just gone." },
+              "change_pct": { "type": "number", "description": "expected against last_period, in percent." },
+              "prob_higher": { "type": "number", "minimum": 0, "maximum": 1, "description": "Chance the coming period is more volatile than the one just gone." }
+            }
+          }
+        },
+        "history": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["t", "value"],
+          "description": "Hourly typical move over the last week of trading, oldest first. Columns of equal length.",
+          "properties": {
+            "t": { "type": "array", "minItems": 2, "items": { "$ref": "common.schema.json#/$defs/utcTime" } },
+            "value": { "type": "array", "minItems": 2, "items": { "type": "number", "minimum": 0 } }
+          }
+        },
+        "scorecard": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tested_from", "tested_to", "note", "rows"],
+          "description": "How the model did on past data it had not seen, compared with simple guesses. Shown next to the forecast so a weak model is visible.",
+          "properties": {
+            "tested_from": { "$ref": "common.schema.json#/$defs/utcTime" },
+            "tested_to": { "$ref": "common.schema.json#/$defs/utcTime" },
+            "note": { "type": "string", "maxLength": 300 },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["horizon_h", "samples", "error_model_pct", "error_persist_pct", "error_tod_pct", "error_avg90_pct", "hit_rate", "hit_rate_tod", "base_rate", "brier_model", "brier_tod", "brier_base", "verdict", "calibration"],
+                "properties": {
+                  "horizon_h": { "enum": [12, 24] },
+                  "samples": { "type": "integer", "minimum": 1 },
+                  "error_model_pct": { "type": "number", "description": "Average size error of the model." },
+                  "error_persist_pct": { "type": "number", "description": "Guess: the next period equals the last one." },
+                  "error_tod_pct": { "type": "number", "description": "Guess: the last period adjusted only for the usual time-of-day pattern." },
+                  "error_avg90_pct": { "type": "number", "description": "Guess: the last 90 days' average." },
+                  "hit_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "How often the model called 'more volatile or not' right." },
+                  "hit_rate_tod": { "type": "number", "minimum": 0, "maximum": 1, "description": "Same call from the time-of-day pattern alone." },
+                  "base_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "Always giving the more common answer." },
+                  "brier_model": { "type": "number", "minimum": 0, "description": "Probability score, lower is better." },
+                  "brier_tod": { "type": "number", "minimum": 0 },
+                  "brier_base": { "type": "number", "minimum": 0 },
+                  "verdict": { "enum": ["better", "mixed", "no better"], "description": "better = beats every guess on both size and probability." },
+                  "calibration": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["label", "n", "said", "happened"],
+                      "properties": {
+                        "label": { "type": "string" },
+                        "n": { "type": "integer", "minimum": 0 },
+                        "said": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+                        "happened": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "description": "Scheduled news from the MT5 economic calendar, soonest first. Empty when the calendar is not connected.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["time", "title", "impact", "currency"],
+            "properties": {
+              "time": { "$ref": "common.schema.json#/$defs/utcTime" },
+              "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "impact": { "enum": ["low", "medium", "high"] },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+            }
+          }
+        }
+      }
+    },
+
+    "alerts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "channels", "recent"],
+      "properties": {
+        "events": {
+          "type": "array",
+          "description": "What triggers an alert, each switchable.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "enabled"],
+            "properties": {
+              "id": { "enum": ["buy_signal", "sell_signal", "trade_closed", "heads_up", "order_failed", "bot_offline"] },
+              "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+              "enabled": { "type": "boolean" }
+            }
+          }
+        },
+        "channels": {
+          "type": "array",
+          "description": "Where alerts go. TradingView alerts are made inside TradingView, so that channel is always 'external'.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "status", "enabled", "note"],
+            "properties": {
+              "id": { "enum": ["mt5_push", "mt5_email", "telegram", "dashboard", "tradingview"] },
+              "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+              "status": { "enum": ["ready", "needs_setup", "external"] },
+              "enabled": { "type": "boolean" },
+              "note": { "type": ["string", "null"], "maxLength": 160 }
+            }
+          }
+        },
+        "recent": {
+          "type": "array",
+          "description": "Last alerts sent, newest first.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["time", "event", "channel", "delivered", "text"],
+            "properties": {
+              "time": { "$ref": "common.schema.json#/$defs/utcTime" },
+              "event": { "enum": ["buy_signal", "sell_signal", "trade_closed", "heads_up", "order_failed", "bot_offline"] },
+              "channel": { "enum": ["mt5_push", "mt5_email", "telegram", "dashboard", "tradingview"] },
+              "delivered": { "type": "boolean" },
+              "text": { "type": "string", "minLength": 1, "maxLength": 200 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "candleSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "o", "h", "l", "c", "fast", "slow"],
+      "description": "Candles as columns of equal length, oldest first. The last candle is still forming. fast and slow are the 1-minute averages at each candle's last 1-minute close; null until the slow average has enough history.",
+      "properties": {
+        "t": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/utcTime" }, "description": "Open time of each candle." },
+        "o": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/price" } },
+        "h": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/price" } },
+        "l": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/price" } },
+        "c": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/price" } },
+        "fast": { "type": "array", "items": { "type": ["number", "null"] } },
+        "slow": { "type": "array", "items": { "type": ["number", "null"] } }
+      }
+    },
+    "tally": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["net_profit", "trades", "wins"],
+      "description": "Closed-trade results: net_profit = profit + commission + swap, trades = closing deals, wins = deals with a positive net result.",
+      "properties": {
+        "net_profit": { "$ref": "common.schema.json#/$defs/amount" },
+        "trades": { "type": "integer", "minimum": 0 },
+        "wins": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

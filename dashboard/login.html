@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Sign in - Bot Console</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>.login{max-width:360px;margin:12vh auto;padding:0 16px;display:grid;gap:14px}.login h1{font-size:22px;font-weight:600}</style>
+</head>
+<body>
+  <main class="login">
+    <h1>Bot Console</h1>
+    <form id="f" class="stack">
+      <div class="field-block"><label for="pw">Password</label>
+        <input class="input" id="pw" type="password" autocomplete="current-password" required></div>
+      <p class="error" id="err" role="alert" hidden></p>
+      <button class="btn lg primary" type="submit">Sign in</button>
+    </form>
+  </main>
+  <script>
+    const f = document.getElementById("f"), err = document.getElementById("err");
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await fetch("/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: document.getElementById("pw").value }) });
+      if (r.ok) { location.href = "/"; return; }
+      const j = await r.json().catch(() => ({}));
+      err.textContent = j.detail || "Could not sign in."; err.hidden = false;
+    });
+  </script>
+</body>
+</html>

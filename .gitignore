@@ -1,0 +1,15 @@
+# secrets and local state: never commit
+server/config.json
+server/data/
+server/*.out.txt
+server/*.err.txt
+
+# large exported price data (regenerate with tools/export_m1.mq5)
+research/data/
+research/out/
+
+# build and tool leftovers
+node_modules/
+__pycache__/
+*.pyc
+*.ex5

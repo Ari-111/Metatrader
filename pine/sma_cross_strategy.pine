@@ -1,0 +1,43 @@
+//@version=6
+// Gold cross (PRIVATE TEST VERSION, NOT YET RUN IN TRADINGVIEW)
+//
+// For YOUR OWN checking only. Do not share this one: a strategy() script lists every trade in the
+// Strategy Tester, which shows exactly when it enters and leaves, and it draws both averages.
+//
+// Put it on a 1-MINUTE XAUUSD chart. It follows docs/sma-cross-spec.md:
+//   - Buy / Sell on a fresh cross of the 100-candle average over the 5,000-candle average, on a closed candle.
+//   - The opposite cross closes the trade and (inside trading hours) opens the other side: stop-and-reverse.
+//   - New trades only 03:30 to 11:00 IST (22:00 to 05:30 UTC). The opposite-cross exit works all day.
+//   - Take profit and stop loss as price distances (300 pips = 30.00 USD, 100 pips = 10.00 USD).
+// What to compare with the MT5 bot: the list of trade times (Strategy Tester > List of Trades > Export).
+// TradingView prices come from a different feed, so expect some crosses to land a candle away.
+strategy("Gold cross (private test)", overlay = true, initial_capital = 10000, default_qty_type = strategy.fixed, default_qty_value = 1, pyramiding = 0, calc_on_every_tick = false, commission_type = strategy.commission.cash_per_contract, commission_value = 0.03)
+
+tpUsd = input.float(30.0, "Take profit (price distance, USD)", minval = 1.0)
+slUsd = input.float(10.0, "Stop loss (price distance, USD)", minval = 1.0)
+useHours = input.bool(true, "Open trades only 03:30 to 11:00 IST")
+
+fast = ta.sma(close, 100)
+slow = ta.sma(close, 5000)
+buy = ta.crossover(fast, slow)
+sell = ta.crossunder(fast, slow)
+inHours = not useHours or not na(time(timeframe.period, "2200-0530", "UTC"))
+
+if buy
+    if inHours
+        strategy.entry("Buy", strategy.long)       // also closes a short: stop-and-reverse
+    else
+        strategy.close("Sell", comment = "opposite cross")
+if sell
+    if inHours
+        strategy.entry("Sell", strategy.short)
+    else
+        strategy.close("Buy", comment = "opposite cross")
+
+if strategy.position_size > 0
+    strategy.exit("Buy exit", "Buy", limit = strategy.position_avg_price + tpUsd, stop = strategy.position_avg_price - slUsd)
+if strategy.position_size < 0
+    strategy.exit("Sell exit", "Sell", limit = strategy.position_avg_price - tpUsd, stop = strategy.position_avg_price + slUsd)
+
+plot(fast, "Fast (100)", color = #2a78d6)
+plot(slow, "Slow (5000)", color = #eb6834, linewidth = 2)

@@ -1,0 +1,7 @@
+{
+  "schema_version": "0.2",
+  "status": "rejected",
+  "command_id": null,
+  "expires_at": null,
+  "reason": "Lot 0.50 is above the largest lot allowed (0.10)."
+}
